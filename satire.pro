@@ -5,11 +5,13 @@ PRO satire_nlte
 	;--------------------------------------------------------
 	;CHANGE THIS TO THE DIRECTORY WHERE YOU HAVE THESE FILES.
 	;--------------------------------------------------------
-	path='/data/yeo/SATIRE-NLTE/'
+;	path='/data/yeo/SATIRE-NLTE/'
+	path='/mnt/SSD/sim/satire/'
 	;---------------------------------------------------
 	;YOU PROVIDED TWO QS MODELS. I USED THE Q_KUR MODEL.
 	;---------------------------------------------------
 	qsn1_fn=path+'intensity_models/Q_kur'
+	qsn2_fn=path+'intensity_models/Q_fal'
 	fac1_fn=path+'intensity_models/F_fal'
 	umb1_fn=path+'intensity_models/U_kur'
 	pen1_fn=path+'intensity_models/P_kur'
@@ -17,12 +19,18 @@ PRO satire_nlte
 	;I SET THE RANGE OF BSAT TESTED AS 290G TO 300G. THE OPTIMAL VALUE IS 292G. AS YOU ADJUST THE SPECTRA YOU MIGHT HAVE TO CHANGE THIS RANGE.
 	;THE ROUTINE WILL PRINT OUT THE OPTIMAL BSAT. IF YOU GET 290G OR 300G THEN YOU SHOULD EXTEND THIS RANGE.----------------------------------
 	;-----------------------------------------------------------------------------------------------------------------------------------------
-	SATIRE,path,qsn1_fn,fac1_fn,umb1_fn,pen1_fn,290,300,/NLTE
+
+;	SATIRE,path,qsn1_fn,qsn2_fn,fac1_fn,umb1_fn,pen1_fn,290,300,/NLTE
+	SATIRE,path,qsn1_fn,qsn2_fn,fac1_fn,umb1_fn,pen1_fn,250,350,/NLTE
+
 	FIX_BSAT,path,free_p1,/NLTE
-	SATIRE_SPEC,path,qsn1_fn,fac1_fn,umb1_fn,pen1_fn,free_p1,/NLTE
+
+	SATIRE_SPEC,path,qsn1_fn,qsn2_fn,fac1_fn,umb1_fn,pen1_fn,free_p1,/NLTE
+
 	RESTORE,path+'hmi_satire_date'
 	RESTORE,path+'hmi_satire_tsi1'
 	RESTORE,path+'hmi_satire_ssi1'
+
 	tsi=INTERPOL(satire_tsi,satire_date,ROUND(satire_date))
 	n=N_ELEMENTS(satire_date)	
 	ssi=DBLARR(n,1221)	
@@ -33,11 +41,12 @@ PRO satire_nlte
 	;THIS IS THE FINAL OUTPUT FILE. THE RECONSTRUCTION BASED ON THE LTE SPECTRA IS SATIRE_LTE.SAV.
 	;---------------------------------------------------------------------------------------------
 	SAVE,date,wl,tsi,ssi,FILENAME=path+'satire_nlte.sav'
+
+    print, 'done.'
 END
 
 PRO satire_lte
-
-	path='/mnt/SSD/sim/satire_lte/'
+	path='/data/yeo/SATIRE-NLTE/'
 	qsn0_fn=path+'intensity_models/qs_1.dat'
 	fac0_fn=path+'intensity_models/fac_5.dat'
 	umb0_fn=path+'intensity_models/umbra_1.dat'
@@ -57,32 +66,49 @@ PRO satire_lte
 	SAVE,date,wl,tsi,ssi,FILENAME=path+'satire_lte.sav'
 END
 
-PRO satire_spec,path,qsn_fn,fac_fn,umb_fn,pen_fn,free_p,lte=lte,nlte=nlte
+PRO satire_spec,path,qsn1_fn,qsn2_fn,fac_fn,umb_fn,pen_fn,free_p,lte=lte,nlte=nlte
 	RESTORE,FILENAME=path+'hmi_satire_date'
 	ff_fn=FILE_SEARCH(path+'fil_fac/*',COUNT=n)
 	satire_ssi=DBLARR(n,1221)
 	IF N_ELEMENTS(LTE)  NE 0 THEN RESTORE,FILENAME=path+'hmi_satire_tsi0'
 	IF N_ELEMENTS(NLTE) NE 0 THEN RESTORE,FILENAME=path+'hmi_satire_tsi1'
-	FOR i=0,n-1 DO satire_ssi[i,*]=REL_IRAD_SPEC(qsn_fn,fac_fn,umb_fn,pen_fn,ff_fn[i],free_p,600.)
-	RDINTEN,qsn_fn,d1,d2
+
+	FOR i = 0, n - 1 DO begin
+
+;        print, 'rel_irad_spec: date ', i + 1, ' out of ', n, ' dates'
+
+        satire_ssi[i,*]=REL_IRAD_SPEC(qsn1_fn,qsn2_fn,fac_fn,umb_fn,pen_fn,ff_fn[i],free_p,600.)
+
+    endfor
+
+	RDINTEN,qsn1_fn,d1,d2
 	wl=d1[1,*]
 	FOR i=0,n-1 DO satire_ssi[i,*]=satire_tsi[i]*satire_ssi[i,*]/TSUM(wl,satire_ssi[i,*])
 	IF N_ELEMENTS(LTE)  NE 0 THEN SAVE,wl,satire_ssi,FILENAME=path+'hmi_satire_ssi0'
 	IF N_ELEMENTS(NLTE) NE 0 THEN SAVE,wl,satire_ssi,FILENAME=path+'hmi_satire_ssi1'
 END
 
-PRO satire,path,qsn_fn,fac_fn,umb_fn,pen_fn,ll,ul,lte=lte,nlte=nlte
+PRO satire,path,qsn1_fn,qsn2_fn,fac_fn,umb_fn,pen_fn,ll,ul,lte=lte,nlte=nlte
 	IF N_ELEMENTS(LTE)  NE 0 THEN FILE_DELETE,path+'sat0/*'
 	IF N_ELEMENTS(NLTE) NE 0 THEN FILE_DELETE,path+'sat1/*'
 	ff_fn=FILE_SEARCH(path+'fil_fac/*',COUNT=n)
 	satire_tsi=DBLARR(n)
-	FOR free_p=ll,ul DO BEGIN
+
+	FOR free_p = ll, ul DO BEGIN
 
         print, 'free parameter: ', free_p, ' in range ', ll, ' ', ul
 
-		FOR i=0,n-1 DO satire_tsi[i]=REL_IRAD(qsn_fn,fac_fn,umb_fn,pen_fn,ff_fn[i],free_p,600.)
+		FOR i = 0, n - 1 do begin
+
+;            print, 'rel_irad: date ', i + 1, ' out of ', n, ' dates'
+
+            satire_tsi[i]=REL_IRAD(qsn1_fn,qsn2_fn,fac_fn,umb_fn,pen_fn,ff_fn[i],free_p,600.)
+
+        endfor
+
 		IF N_ELEMENTS(LTE)  NE 0 THEN SAVE,satire_tsi,FILENAME=path+'sat0/hmi_satire_tsi_'+STRCOMPRESS(free_p,/REMOVE_ALL)
 		IF N_ELEMENTS(NLTE) NE 0 THEN SAVE,satire_tsi,FILENAME=path+'sat1/hmi_satire_tsi_'+STRCOMPRESS(free_p,/REMOVE_ALL)
+
 	ENDFOR
 END
 
@@ -164,11 +190,12 @@ END
 ;---------------------------
 ;RELATIVE IRRADIANCE (TOTAL)
 ;---------------------------
-FUNCTION REL_IRAD,qsn_fn,fac_fn,umb_fn,pen_fn,sav_fn,free_p,bcut,sqrt=sqrt
+FUNCTION REL_IRAD,qsn1_fn,qsn2_fn,fac_fn,umb_fn,pen_fn,sav_fn,free_p,bcut,sqrt=sqrt
 	;------------------------------------
 	;LOAD INTENSITY MODELS & FILL FACTORS
 	;------------------------------------
-	RDINTEN,qsn_fn,qsn_int,qsn_mu
+	RDINTEN,qsn1_fn,qsn1_int,qsn_mu
+	RDINTEN,qsn2_fn,qsn2_int,qsn_mu
 	RDINTEN,fac_fn,fac_int,fac_mu
 	RDINTEN,umb_fn,umb_int,umb_mu
 	RDINTEN,pen_fn,pen_int,pen_mu
@@ -177,7 +204,9 @@ FUNCTION REL_IRAD,qsn_fn,fac_fn,umb_fn,pen_fn,sav_fn,free_p,bcut,sqrt=sqrt
 	;RELATIVE IRRADIANCE
 	;-------------------
 	IF N_ELEMENTS(sqrt) EQ 0 THEN ALPHA6,free_p,fac_hst,fac_alpha ELSE ALPHA6,free_p,fac_hst,fac_alpha,/SQRT
-	CALCINT,fac_alpha,umb_hst,pen_hst,mu_hst,qsn_mu,qsn_int,fac_int,umb_int,pen_int,image,image_qsn,fac_c,umb_c,pen_c,bcut
+
+	CALCINT,fac_alpha,umb_hst,pen_hst,mu_hst,qsn_mu,qsn1_int,qsn2_int,fac_int,umb_int,pen_int,image,image_qsn,fac_c,umb_c,pen_c,bcut
+
 	ri=(TOTAL(image,/DOUBLE)/TOTAL(image_qsn,/DOUBLE)-1.d0)*1.d6
 	RETURN,ri
 END
@@ -185,44 +214,58 @@ END
 ;-------------------
 ;CALCULATE INTENSITY
 ;-------------------
-PRO CALCINT,fac_ff,umb_ff,pen_ff,np,angles,qsn_intlut,fac_intlut,umb_intlut,pen_intlut,image,qsn_image,fac_c,umb_c,pen_c,bcut
+PRO CALCINT,fac_ff,umb_ff,pen_ff,np,angles,qsn1_intlut,qsn2_intlut,fac_intlut,umb_intlut,pen_intlut,image,qsn_image,fac_c,umb_c,pen_c,bcut
 ;--------------
 ;INITIALIZATION
 ;--------------
 	szm=SIZE(fac_ff)
 	sza=SIZE(angles)
+
 	image=DBLARR(szm[1])
 	qsn_image=DBLARR(szm[1])
-	qsn_sumint=DBLARR(sza[1])
+
+	qsn1_sumint=DBLARR(sza[1])
+	qsn2_sumint=DBLARR(sza[1])
+
 	fac_sumint=DBLARR(sza[1])
 	umb_sumint=DBLARR(sza[1])
 	pen_sumint=DBLARR(sza[1])
+
 	c=DOUBLE(2.9979e8*1d9)					;SPEED OF LIGHT
-	f=REFORM(c/(DOUBLE(qsn_intlut[1,*])))	;FREQUENCY
+	f=REFORM(c/(DOUBLE(qsn1_intlut[1,*])))	;FREQUENCY
 ;-------------------
 ;INTEGRATE INTENSITY
 ;-------------------
 	FOR i=0,sza[1]-1 DO BEGIN
-		d=REFORM(qsn_intlut[i+3,*])*1d-3*f^2/c
-		qsn_sumint[i]=TSUM(qsn_intlut[1,*],d)
+		d=REFORM(qsn1_intlut[i+3,*])*1d-3*f^2/c
+		qsn1_sumint[i]=TSUM(qsn1_intlut[1,*],d)
+
+		d=REFORM(qsn2_intlut[i+3,*])*1d-3*f^2/c
+		qsn2_sumint[i]=TSUM(qsn2_intlut[1,*],d)
+
 		d=REFORM(fac_intlut[i+3,*])*1d-3*f^2/c
 		fac_sumint[i]=TSUM(fac_intlut[1,*],d)
+
 		d=REFORM(umb_intlut[i+3,*])*1d-3*f^2/c
 		umb_sumint[i]=TSUM(umb_intlut[1,*],d)
+
 		d=REFORM(pen_intlut[i+3,*])*1d-3*f^2/c
 		pen_sumint[i]=TSUM(pen_intlut[1,*],d)
 	ENDFOR
 ;--------
 ;CONTRAST
 ;--------
-	fac_c=fac_sumint/qsn_sumint
-	umb_c=umb_sumint/qsn_sumint
-	pen_c=pen_sumint/qsn_sumint
+	fac_c=fac_sumint/qsn2_sumint
+	umb_c=umb_sumint/qsn1_sumint
+	pen_c=pen_sumint/qsn1_sumint
 ;--------------
 ;INTERPOLATE MU
 ;--------------
 	new_angles=FINDGEN(101)/100.
-	new_qsn_sumint=INTERPOL(qsn_sumint,angles,new_angles)
+
+	new_qsn1_sumint=INTERPOL(qsn1_sumint,angles,new_angles)
+	new_qsn2_sumint=INTERPOL(qsn2_sumint,angles,new_angles)
+
 	new_fac_sumint=INTERPOL(fac_sumint,angles,new_angles)
 	new_umb_sumint=INTERPOL(umb_sumint,angles,new_angles)
 	new_pen_sumint=INTERPOL(pen_sumint,angles,new_angles)
@@ -233,23 +276,34 @@ PRO CALCINT,fac_ff,umb_ff,pen_ff,np,angles,qsn_intlut,fac_intlut,umb_intlut,pen_
 	cutoff=ROUND(mu_max/.01)
 	IF bcut NE -1 THEN fac_ff[*,ROUND(bcut/5.):240]=0
 	FOR i=cutoff,szm[1]-1 DO BEGIN
-		image[i]=$
-			(np[i]-TOTAL(fac_ff[i,*])-umb_ff[i]-pen_ff[i])*new_qsn_sumint[i]+$
-			TOTAL(fac_ff[i,*])*new_fac_sumint[i]+$
-			umb_ff[i]*new_umb_sumint[i]+$
-			pen_ff[i]*new_pen_sumint[i]
-		qsn_image[i]=np[i]*new_qsn_sumint[i]
+
+;		image[i]=$
+;			(np[i]-TOTAL(fac_ff[i,*])-umb_ff[i]-pen_ff[i])*new_qsn1_sumint[i]+$
+;			TOTAL(fac_ff[i,*])*new_fac_sumint[i]+$
+;			umb_ff[i]*new_umb_sumint[i]+$
+;			pen_ff[i]*new_pen_sumint[i]
+
+		qsn_image[i] = np[i] * new_qsn2_sumint[i]
+
+        image[i] = qsn_image[i] + total(fac_ff[i, *]) * (new_fac_sumint[i] - new_qsn2_sumint[i]) + $
+                                        umb_ff[i]     * (new_umb_sumint[i] - new_qsn1_sumint[i]) + $
+                                        pen_ff[i]     * (new_pen_sumint[i] - new_qsn1_sumint[i])
+
+;		qsn_image[i]=np[i]*new_qsn1_sumint[i]
+;		qsn_image[i] = np[i] * new_qsn1_sumint[i] + TOTAL(fac_ff[i, *]) * (new_qsn2_sumint[i] - new_qsn1_sumint[i])
+
     ENDFOR
 END
 
 ;------------------------------
 ;RELATIVE IRRADIANCE (SPECTRAL)
 ;------------------------------
-FUNCTION REL_IRAD_SPEC,qsn_fn,fac_fn,umb_fn,pen_fn,sav_fn,free_p,bcut,sqrt=sqrt
+FUNCTION REL_IRAD_SPEC,qsn1_fn,qsn2_fn,fac_fn,umb_fn,pen_fn,sav_fn,free_p,bcut,sqrt=sqrt
 	;------------------------------------
 	;LOAD INTENSITY MODELS & FILL FACTORS
 	;------------------------------------
-	RDINTEN,qsn_fn,qsn_int,qsn_mu
+	RDINTEN,qsn1_fn,qsn1_int,qsn_mu
+	RDINTEN,qsn2_fn,qsn2_int,qsn_mu
 	RDINTEN,fac_fn,fac_int,fac_mu
 	RDINTEN,umb_fn,umb_int,umb_mu
 	RDINTEN,pen_fn,pen_int,pen_mu
@@ -258,7 +312,7 @@ FUNCTION REL_IRAD_SPEC,qsn_fn,fac_fn,umb_fn,pen_fn,sav_fn,free_p,bcut,sqrt=sqrt
 	;RELATIVE IRRADIANCE
 	;-------------------
 	IF N_ELEMENTS(sqrt) EQ 0 THEN ALPHA6,free_p,fac_hst,fac_alpha ELSE ALPHA6,free_p,fac_hst,fac_alpha,/SQRT
-	CALCINT_SPEC,fac_alpha,umb_hst,pen_hst,mu_hst,qsn_mu,qsn_int,fac_int,umb_int,pen_int,image,image_qsn,fac_c,umb_c,pen_c,bcut
+	CALCINT_SPEC,fac_alpha,umb_hst,pen_hst,mu_hst,qsn_mu,qsn1_int,qsn2_int,fac_int,umb_int,pen_int,image,image_qsn,fac_c,umb_c,pen_c,bcut
 	ri=TOTAL(image,1,/DOUBLE)
 	RETURN,ri
 END
@@ -266,26 +320,32 @@ END
 ;-------------------
 ;CALCULATE INTENSITY
 ;-------------------
-PRO CALCINT_SPEC,fac_ff,umb_ff,pen_ff,np,angles,qsn_intlut,fac_intlut,umb_intlut,pen_intlut,image,qsn_image,fac_c,umb_c,pen_c,bcut
+PRO CALCINT_SPEC,fac_ff,umb_ff,pen_ff,np,angles,qsn1_intlut,qsn2_intlut,fac_intlut,umb_intlut,pen_intlut,image,qsn_image,fac_c,umb_c,pen_c,bcut
 ;--------------
 ;INITIALIZATION
 ;--------------
 	szm=SIZE(fac_ff)
 	sza=SIZE(angles)
-	szl=SIZE(qsn_intlut)
+	szl=SIZE(qsn1_intlut)
 	image=DBLARR(szm[1],szl[2])
 	qsn_image=DBLARR(szm[1],szl[2])
-	qsn_sumint=DBLARR(sza[1],szl[2])
+
+	qsn1_sumint=DBLARR(sza[1],szl[2])
+	qsn2_sumint=DBLARR(sza[1],szl[2])
+
 	fac_sumint=DBLARR(sza[1],szl[2])
 	umb_sumint=DBLARR(sza[1],szl[2])
 	pen_sumint=DBLARR(sza[1],szl[2])
+
 	c=DOUBLE(2.9979e8*1d9)					;SPEED OF LIGHT
-	f=REFORM(c/(DOUBLE(qsn_intlut[1,*])))	;FREQUENCY
+	f=REFORM(c/(DOUBLE(qsn1_intlut[1,*])))	;FREQUENCY
 ;-------------------
 ;INTEGRATE INTENSITY
 ;-------------------
 	FOR i=0,sza[1]-1 DO BEGIN
-		qsn_sumint[i,*]=qsn_intlut[i+3,*]*1d-3*f^2/c
+		qsn1_sumint[i,*]=qsn1_intlut[i+3,*]*1d-3*f^2/c
+		qsn2_sumint[i,*]=qsn2_intlut[i+3,*]*1d-3*f^2/c
+
 		fac_sumint[i,*]=fac_intlut[i+3,*]*1d-3*f^2/c
 		umb_sumint[i,*]=umb_intlut[i+3,*]*1d-3*f^2/c
 		pen_sumint[i,*]=pen_intlut[i+3,*]*1d-3*f^2/c
@@ -293,19 +353,25 @@ PRO CALCINT_SPEC,fac_ff,umb_ff,pen_ff,np,angles,qsn_intlut,fac_intlut,umb_intlut
 ;--------
 ;CONTRAST
 ;--------
-	fac_c=fac_sumint/qsn_sumint
-	umb_c=umb_sumint/qsn_sumint
-	pen_c=pen_sumint/qsn_sumint
+	fac_c=fac_sumint/qsn2_sumint
+	umb_c=umb_sumint/qsn1_sumint
+	pen_c=pen_sumint/qsn1_sumint
 ;--------------
 ;INTERPOLATE MU
 ;--------------
 	new_angles=FINDGEN(101)/100.
-	new_qsn_sumint=DBLARR(101,szl[2])
+
+	new_qsn1_sumint=DBLARR(101,szl[2])
+	new_qsn2_sumint=DBLARR(101,szl[2])
+
 	new_fac_sumint=DBLARR(101,szl[2])
 	new_umb_sumint=DBLARR(101,szl[2])
 	new_pen_sumint=DBLARR(101,szl[2])
+
 	FOR i=0,szl[2]-1 DO BEGIN
-		new_qsn_sumint[*,i]=INTERPOL(qsn_sumint[*,i],angles,new_angles)
+		new_qsn1_sumint[*,i]=INTERPOL(qsn1_sumint[*,i],angles,new_angles)
+		new_qsn2_sumint[*,i]=INTERPOL(qsn2_sumint[*,i],angles,new_angles)
+
 		new_fac_sumint[*,i]=INTERPOL(fac_sumint[*,i],angles,new_angles)
 		new_umb_sumint[*,i]=INTERPOL(umb_sumint[*,i],angles,new_angles)
 		new_pen_sumint[*,i]=INTERPOL(pen_sumint[*,i],angles,new_angles)
@@ -317,42 +383,37 @@ PRO CALCINT_SPEC,fac_ff,umb_ff,pen_ff,np,angles,qsn_intlut,fac_intlut,umb_intlut
 	cutoff=ROUND(mu_max/.01)
 	IF bcut NE -1 THEN fac_ff[*,ROUND(bcut/5.):240]=0
 
-	FOR i=cutoff,szm[1]-1 DO BEGIN
-		image[i,*]=$
-			(np[i]-TOTAL(fac_ff[i,*])-umb_ff[i]-pen_ff[i])*new_qsn_sumint[i,*]+$
-			TOTAL(fac_ff[i,*])*new_fac_sumint[i,*]+$
-			umb_ff[i]*new_umb_sumint[i,*]+$
-			pen_ff[i]*new_pen_sumint[i,*]
-		qsn_image[i,*]=np[i]*new_qsn_sumint[i,*]
+	FOR i = cutoff, szm[1] - 1 DO BEGIN
+
+		qsn_image[i, *] = np[i] * new_qsn2_sumint[i, *]
+
+;		image[i,*]=$
+;			(np[i]-TOTAL(fac_ff[i,*])-umb_ff[i]-pen_ff[i])*new_qsn1_sumint[i,*]+$
+;			TOTAL(fac_ff[i,*])*new_fac_sumint[i,*]+$
+;			umb_ff[i]*new_umb_sumint[i,*]+$
+;			pen_ff[i]*new_pen_sumint[i,*]
+
+        image[i, *] = qsn_image[i, *] + total(fac_ff[i, *]) * (new_fac_sumint[i, *] - new_qsn2_sumint[i, *]) + $
+                                              umb_ff[i]     * (new_umb_sumint[i, *] - new_qsn1_sumint[i, *]) + $
+                                              pen_ff[i]     * (new_pen_sumint[i, *] - new_qsn1_sumint[i, *])
+
+;		qsn_image[i, *] = np[i] * new_qsn1_sumint[i, *] + TOTAL(fac_ff[i, *]) * (new_qsn2_sumint[i, *] - new_qsn1_sumint[i, *])
+;		qsn_image[i] = np[i] * new_qsn1_sumint[i] + TOTAL(fac_ff[i, *]) * (new_qsn2_sumint[i] - new_qsn1_sumint[i])
+
     ENDFOR
+
 END
 
-PRO RDINTEN, filename, intens, angles
-
-	angles = [1., .9, .8, .7, .6, .5, .4, .3, .2, .1, .05]
-
-	intens = DBLARR(14, 1221)
-
-	dummy1 = DBLARR(3)
-	dummy2 = DBLARR(8)
-	dummy3 = DBLARR(3)
-
-	OPENR, 1, filename
-
-	FOR i = 0, 1220 DO BEGIN
-
-		READF, 1, dummy1
-		READF, 1, dummy2
-		READF, 1, dummy3
-
-		FOR j = 0, 2 DO intens(j, i) = dummy1(j)
-		FOR j = 0, 7 DO intens(j + 3, i) = dummy2(j)
-		FOR j = 0, 2 DO intens(j + 11, i) = dummy3(j)
-
+PRO RDINTEN,filename,intens,angles
+	angles=[1.,.9,.8,.7,.6,.5,.4,.3,.2,.1,.05]
+	intens=DBLARR(14,1221)
+	dummy=DBLARR(14)
+	OPENR,1,filename
+	FOR i=0,1220 DO BEGIN
+		READF,1,dummy
+		FOR j=0,13 DO intens(j,i)=dummy(j)
 	ENDFOR
-
-	CLOSE, 1
-
+	CLOSE,1
 END
 
 FUNCTION TSUM,X,Y,IMIN,IMAX, NAN=NAN              ;Trapezoidal summation
