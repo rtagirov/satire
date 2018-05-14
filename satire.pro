@@ -5,8 +5,7 @@ PRO satire_nlte
 	;--------------------------------------------------------
 	;CHANGE THIS TO THE DIRECTORY WHERE YOU HAVE THESE FILES.
 	;--------------------------------------------------------
-;	path='/data/yeo/SATIRE-NLTE/'
-	path='/mnt/SSD/sim/satire/'
+	path='/mnt/SSD/sim/satire_nlte_ss/'
 	;---------------------------------------------------
 	;YOU PROVIDED TWO QS MODELS. I USED THE Q_KUR MODEL.
 	;---------------------------------------------------
@@ -21,7 +20,9 @@ PRO satire_nlte
 	;-----------------------------------------------------------------------------------------------------------------------------------------
 
 ;	SATIRE,path,qsn1_fn,qsn2_fn,fac1_fn,umb1_fn,pen1_fn,290,300,/NLTE
-	SATIRE,path,qsn1_fn,qsn2_fn,fac1_fn,umb1_fn,pen1_fn,250,350,/NLTE
+;	SATIRE,path,qsn1_fn,qsn2_fn,fac1_fn,umb1_fn,pen1_fn,250,350,/NLTE
+;	SATIRE,path,qsn1_fn,qsn2_fn,fac1_fn,umb1_fn,pen1_fn,260,270,/NLTE
+	SATIRE,path,qsn1_fn,qsn2_fn,fac1_fn,umb1_fn,pen1_fn,266,266,/NLTE
 
 	FIX_BSAT,path,free_p1,/NLTE
 
@@ -43,6 +44,7 @@ PRO satire_nlte
 	SAVE,date,wl,tsi,ssi,FILENAME=path+'satire_nlte.sav'
 
     print, 'done.'
+
 END
 
 PRO satire_lte
@@ -274,23 +276,18 @@ PRO CALCINT,fac_ff,umb_ff,pen_ff,np,angles,qsn1_intlut,qsn2_intlut,fac_intlut,um
 ;---------
 	mu_max=.1
 	cutoff=ROUND(mu_max/.01)
+
 	IF bcut NE -1 THEN fac_ff[*,ROUND(bcut/5.):240]=0
+
 	FOR i=cutoff,szm[1]-1 DO BEGIN
 
-;		image[i]=$
-;			(np[i]-TOTAL(fac_ff[i,*])-umb_ff[i]-pen_ff[i])*new_qsn1_sumint[i]+$
-;			TOTAL(fac_ff[i,*])*new_fac_sumint[i]+$
-;			umb_ff[i]*new_umb_sumint[i]+$
-;			pen_ff[i]*new_pen_sumint[i]
+        sf = new_qsn2_sumint[i] / new_qsn1_sumint[i]
 
 		qsn_image[i] = np[i] * new_qsn2_sumint[i]
 
         image[i] = qsn_image[i] + total(fac_ff[i, *]) * (new_fac_sumint[i] - new_qsn2_sumint[i]) + $
-                                        umb_ff[i]     * (new_umb_sumint[i] - new_qsn1_sumint[i]) + $
-                                        pen_ff[i]     * (new_pen_sumint[i] - new_qsn1_sumint[i])
-
-;		qsn_image[i]=np[i]*new_qsn1_sumint[i]
-;		qsn_image[i] = np[i] * new_qsn1_sumint[i] + TOTAL(fac_ff[i, *]) * (new_qsn2_sumint[i] - new_qsn1_sumint[i])
+                                        umb_ff[i]     * (new_umb_sumint[i] - new_qsn1_sumint[i]) * sf + $
+                                        pen_ff[i]     * (new_pen_sumint[i] - new_qsn1_sumint[i]) * sf
 
     ENDFOR
 END
@@ -336,6 +333,8 @@ PRO CALCINT_SPEC,fac_ff,umb_ff,pen_ff,np,angles,qsn1_intlut,qsn2_intlut,fac_intl
 	fac_sumint=DBLARR(sza[1],szl[2])
 	umb_sumint=DBLARR(sza[1],szl[2])
 	pen_sumint=DBLARR(sza[1],szl[2])
+
+    sf = DBLARR(szm[1], szl[2])
 
 	c=DOUBLE(2.9979e8*1d9)					;SPEED OF LIGHT
 	f=REFORM(c/(DOUBLE(qsn1_intlut[1,*])))	;FREQUENCY
@@ -385,22 +384,37 @@ PRO CALCINT_SPEC,fac_ff,umb_ff,pen_ff,np,angles,qsn1_intlut,qsn2_intlut,fac_intl
 
 	FOR i = cutoff, szm[1] - 1 DO BEGIN
 
+        sf[i, *] = new_qsn2_sumint[i, *] / new_qsn1_sumint[i, *]
+
+        for j = 0, szl[2] - 1 do begin
+
+            if sf[i, j] ne sf[i, j] then sf[i, j] = 1.0d0
+
+        endfor
+
 		qsn_image[i, *] = np[i] * new_qsn2_sumint[i, *]
 
-;		image[i,*]=$
-;			(np[i]-TOTAL(fac_ff[i,*])-umb_ff[i]-pen_ff[i])*new_qsn1_sumint[i,*]+$
-;			TOTAL(fac_ff[i,*])*new_fac_sumint[i,*]+$
-;			umb_ff[i]*new_umb_sumint[i,*]+$
-;			pen_ff[i]*new_pen_sumint[i,*]
-
         image[i, *] = qsn_image[i, *] + total(fac_ff[i, *]) * (new_fac_sumint[i, *] - new_qsn2_sumint[i, *]) + $
-                                              umb_ff[i]     * (new_umb_sumint[i, *] - new_qsn1_sumint[i, *]) + $
-                                              pen_ff[i]     * (new_pen_sumint[i, *] - new_qsn1_sumint[i, *])
-
-;		qsn_image[i, *] = np[i] * new_qsn1_sumint[i, *] + TOTAL(fac_ff[i, *]) * (new_qsn2_sumint[i, *] - new_qsn1_sumint[i, *])
-;		qsn_image[i] = np[i] * new_qsn1_sumint[i] + TOTAL(fac_ff[i, *]) * (new_qsn2_sumint[i] - new_qsn1_sumint[i])
+                                              umb_ff[i]     * (new_umb_sumint[i, *] - new_qsn1_sumint[i, *]) * sf[i, *] + $
+                                              pen_ff[i]     * (new_pen_sumint[i, *] - new_qsn1_sumint[i, *]) * sf[i, *]
 
     ENDFOR
+
+;print, 'szm[1] = ', szm[1]
+
+;openw, lun1, 'test.txt', /get_lun
+
+;for i = cutoff, szm[1] - 1 do begin
+
+;    for j = 0, szl[2] - 1 do begin
+
+;    printf, lun1, i, ' ', j, ' ', sf[i, j], ' ', image[i, j]
+
+;    endfor
+
+;endfor
+
+;free_lun, lun1
 
 END
 
