@@ -37,7 +37,7 @@ END
 
 PRO satire_lte
 
-	path='/mnt/SSD/sim/satire_lte/'
+	path='/mnt/SSD/sim/satire/'
 	qsn0_fn=path+'intensity_models/qs_1.dat'
 	fac0_fn=path+'intensity_models/fac_5.dat'
 	umb0_fn=path+'intensity_models/umbra_1.dat'
