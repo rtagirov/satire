@@ -42,7 +42,8 @@ PRO satire_lte
 	fac0_fn=path+'intensity_models/fac_5.dat'
 	umb0_fn=path+'intensity_models/umbra_1.dat'
 	pen0_fn=path+'intensity_models/penumbra_1.dat'
-	SATIRE,path,qsn0_fn,fac0_fn,umb0_fn,pen0_fn,260,270,/LTE
+;	SATIRE,path,qsn0_fn,fac0_fn,umb0_fn,pen0_fn,260,270,/LTE
+	SATIRE,path,qsn0_fn,fac0_fn,umb0_fn,pen0_fn,266,268,/LTE
 	FIX_BSAT,path,free_p0,/LTE
 	SATIRE_SPEC,path,qsn0_fn,fac0_fn,umb0_fn,pen0_fn,free_p0,/LTE
 	RESTORE,path+'hmi_satire_date',/verbose
