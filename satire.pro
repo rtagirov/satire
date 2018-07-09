@@ -321,9 +321,11 @@ PRO CALCINT_SPEC,fac_ff,umb_ff,pen_ff,np,angles,qsn1_intlut,qsn2_intlut,fac_intl
 ;--------------
 ;INITIALIZATION
 ;--------------
-	szm=SIZE(fac_ff)
-	sza=SIZE(angles)
-	szl=SIZE(qsn1_intlut)
+
+	szm = SIZE(fac_ff)      ; size new angles
+	sza = SIZE(angles)      ; size old angles
+	szl = SIZE(qsn1_intlut) ; size wavelengths
+
 	image=DBLARR(szm[1],szl[2])
 	qsn_image=DBLARR(szm[1],szl[2])
 
