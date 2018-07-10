@@ -5,7 +5,7 @@ PRO satire_nlte
 	;--------------------------------------------------------
 	;CHANGE THIS TO THE DIRECTORY WHERE YOU HAVE THESE FILES.
 	;--------------------------------------------------------
-	path='/mnt/SSD/sim/satire_nlte_ss/'
+	path='/mnt/SSD/sim/satire/'
 	;---------------------------------------------------
 	;YOU PROVIDED TWO QS MODELS. I USED THE Q_KUR MODEL.
 	;---------------------------------------------------
@@ -21,8 +21,8 @@ PRO satire_nlte
 
 ;	SATIRE,path,qsn1_fn,qsn2_fn,fac1_fn,umb1_fn,pen1_fn,290,300,/NLTE
 ;	SATIRE,path,qsn1_fn,qsn2_fn,fac1_fn,umb1_fn,pen1_fn,250,350,/NLTE
-;	SATIRE,path,qsn1_fn,qsn2_fn,fac1_fn,umb1_fn,pen1_fn,260,270,/NLTE
-	SATIRE,path,qsn1_fn,qsn2_fn,fac1_fn,umb1_fn,pen1_fn,266,266,/NLTE
+	SATIRE,path,qsn1_fn,qsn2_fn,fac1_fn,umb1_fn,pen1_fn,260,270,/NLTE
+;	SATIRE,path,qsn1_fn,qsn2_fn,fac1_fn,umb1_fn,pen1_fn,266,266,/NLTE
 
 	FIX_BSAT,path,free_p1,/NLTE
 
