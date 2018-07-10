@@ -5,7 +5,7 @@ PRO satire_nlte
 	;--------------------------------------------------------
 	;CHANGE THIS TO THE DIRECTORY WHERE YOU HAVE THESE FILES.
 	;--------------------------------------------------------
-	path='/mnt/SSD/sim/satire_nlte_ss/'
+	path='/mnt/SSD/sim/satire/'
 	;---------------------------------------------------
 	;YOU PROVIDED TWO QS MODELS. I USED THE Q_KUR MODEL.
 	;---------------------------------------------------
@@ -21,8 +21,8 @@ PRO satire_nlte
 
 ;	SATIRE,path,qsn1_fn,qsn2_fn,fac1_fn,umb1_fn,pen1_fn,290,300,/NLTE
 ;	SATIRE,path,qsn1_fn,qsn2_fn,fac1_fn,umb1_fn,pen1_fn,250,350,/NLTE
-;	SATIRE,path,qsn1_fn,qsn2_fn,fac1_fn,umb1_fn,pen1_fn,260,270,/NLTE
-	SATIRE,path,qsn1_fn,qsn2_fn,fac1_fn,umb1_fn,pen1_fn,266,266,/NLTE
+	SATIRE,path,qsn1_fn,qsn2_fn,fac1_fn,umb1_fn,pen1_fn,260,270,/NLTE
+;	SATIRE,path,qsn1_fn,qsn2_fn,fac1_fn,umb1_fn,pen1_fn,266,266,/NLTE
 
 	FIX_BSAT,path,free_p1,/NLTE
 
@@ -336,7 +336,7 @@ PRO CALCINT_SPEC,fac_ff,umb_ff,pen_ff,np,angles,qsn1_intlut,qsn2_intlut,fac_intl
 	umb_sumint=DBLARR(sza[1],szl[2])
 	pen_sumint=DBLARR(sza[1],szl[2])
 
-    sf = DBLARR(szm[1], szl[2])
+    sf = DBLARR(szl[2])
 
 	c=DOUBLE(2.9979e8*1d9)					;SPEED OF LIGHT
 	f=REFORM(c/(DOUBLE(qsn1_intlut[1,*])))	;FREQUENCY
@@ -380,25 +380,33 @@ PRO CALCINT_SPEC,fac_ff,umb_ff,pen_ff,np,angles,qsn1_intlut,qsn2_intlut,fac_intl
 ;---------
 ;INTENSITY
 ;---------
-	mu_max=.1
-	cutoff=ROUND(mu_max/.01)
+	mu_max = .1
+
+	cutoff = ROUND(mu_max / .01)
+
 	IF bcut NE -1 THEN fac_ff[*,ROUND(bcut/5.):240]=0
 
-	FOR i = cutoff, szm[1] - 1 DO BEGIN
+    sf[*] = 0.0d0
 
-        sf[i, *] = new_qsn2_sumint[i, *] / new_qsn1_sumint[i, *]
+    for j = 0, szl[2] - 1 do begin
 
-        for j = 0, szl[2] - 1 do begin
+    	for i = cutoff, szm[1] - 1 do begin
 
-            if sf[i, j] ne sf[i, j] then sf[i, j] = 1.0d0
+            sf[j] = sf[j] + new_qsn2_sumint[i, j] / new_qsn1_sumint[i, j]
 
         endfor
+
+        if sf[j] ne sf[j] then sf[j] = 1.0d0
+
+    endfor
+
+	FOR i = cutoff, szm[1] - 1 DO BEGIN
 
 		qsn_image[i, *] = np[i] * new_qsn2_sumint[i, *]
 
         image[i, *] = qsn_image[i, *] + total(fac_ff[i, *]) * (new_fac_sumint[i, *] - new_qsn2_sumint[i, *]) + $
-                                              umb_ff[i]     * (new_umb_sumint[i, *] - new_qsn1_sumint[i, *]) * sf[i, *] + $
-                                              pen_ff[i]     * (new_pen_sumint[i, *] - new_qsn1_sumint[i, *]) * sf[i, *]
+                                              umb_ff[i]     * (new_umb_sumint[i, *] - new_qsn1_sumint[i, *]) * sf[*] + $
+                                              pen_ff[i]     * (new_pen_sumint[i, *] - new_qsn1_sumint[i, *]) * sf[*]
 
     ENDFOR
 
