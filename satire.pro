@@ -322,6 +322,9 @@ PRO CALCINT_SPEC,fac_ff,umb_ff,pen_ff,np,angles,qsn1_intlut,qsn2_intlut,fac_intl
 ;INITIALIZATION
 ;--------------
 
+    au    = 1.495985e+13 ; Astronomical unit (cm)
+    R_sun = 6.9598e+10   ; solar radius (cm)
+
 	szm = SIZE(fac_ff)      ; size new angles
 	sza = SIZE(angles)      ; size old angles
 	szl = SIZE(qsn1_intlut) ; size wavelengths
@@ -362,6 +365,8 @@ PRO CALCINT_SPEC,fac_ff,umb_ff,pen_ff,np,angles,qsn1_intlut,qsn2_intlut,fac_intl
 ;--------------
 	new_angles=FINDGEN(101)/100.
 
+    ip = sqrt(1.0 - new_angles^2.0)
+
 	new_qsn1_sumint=DBLARR(101,szl[2])
 	new_qsn2_sumint=DBLARR(101,szl[2])
 
@@ -390,11 +395,34 @@ PRO CALCINT_SPEC,fac_ff,umb_ff,pen_ff,np,angles,qsn1_intlut,qsn2_intlut,fac_intl
 
     for j = 0, szl[2] - 1 do begin
 
-    	for i = cutoff, szm[1] - 1 do begin
+        qs2 = 0.0
+        qs1 = 0.0
 
-            sf[j] = sf[j] + new_qsn2_sumint[i, j] / new_qsn1_sumint[i, j]
+    	for i = cutoff, szm[1] - 2 do begin
+
+            dOmega = !pi * (pi[i]^2.0 - pi[i + 1]^2.0) * (R_sun / au)^2.0
+
+            if i ne szm[1] - 2 then begin
+
+                I2 = (new_qsn2_sumint[i, j] + new_qsn2_sumint[i + 1, j]) / 2.0
+
+                I1 = (new_qsn1_sumint[i, j] + new_qsn1_sumint[i + 1, j]) / 2.0
+
+            endif else begin
+
+                I2 = new_qsn2_sumint[szm[1] - 1, j]
+
+                I1 = new_qsn1_sumint[szm[1] - 1, j]
+
+            endelse
+
+            qs2 = qs2 + I2 * dOmega
+
+            qs1 = qs1 + I1 * dOmega
 
         endfor
+
+        sf[j] = qs2 / qs1
 
         if sf[j] ne sf[j] then sf[j] = 1.0d0
 
