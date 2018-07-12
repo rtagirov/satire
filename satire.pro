@@ -274,12 +274,14 @@ PRO CALCINT,fac_ff,umb_ff,pen_ff,np,angles,qsn1_intlut,qsn2_intlut,fac_intlut,um
 ;---------
 ;INTENSITY
 ;---------
+
 	mu_max=.1
-	cutoff=ROUND(mu_max/.01)
+
+	cutoff = ROUND(mu_max/.01)
 
 	IF bcut NE -1 THEN fac_ff[*,ROUND(bcut/5.):240]=0
 
-	FOR i=cutoff,szm[1]-1 DO BEGIN
+	FOR i = cutoff, szm[1] - 1 DO BEGIN
 
         sf = new_qsn2_sumint[i] / new_qsn1_sumint[i]
 
@@ -400,7 +402,7 @@ PRO CALCINT_SPEC,fac_ff,umb_ff,pen_ff,np,angles,qsn1_intlut,qsn2_intlut,fac_intl
 
     	for i = cutoff, szm[1] - 2 do begin
 
-            dOmega = !pi * (pi[i]^2.0 - pi[i + 1]^2.0) * (R_sun / au)^2.0
+            dOmega = !pi * (ip[i]^2.0 - ip[i + 1]^2.0) * (R_sun / au)^2.0
 
             if i ne szm[1] - 2 then begin
 
