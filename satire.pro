@@ -21,8 +21,9 @@ PRO satire_nlte
 	;-----------------------------------------------------------------------------------------------------------------------------------------
 
 ;	SATIRE,path,qsn1_fn,qsn2_fn,fac1_fn,umb1_fn,pen1_fn,290,300,/NLTE
-;	SATIRE,path,qsn1_fn,qsn2_fn,fac1_fn,umb1_fn,pen1_fn,250,350,/NLTE
-	SATIRE,path,qsn1_fn,qsn2_fn,fac1_fn,umb1_fn,pen1_fn,260,270,/NLTE
+;	SATIRE,path,qsn1_fn,qsn2_fn,fac1_fn,umb1_fn,pen1_fn,300,360,/NLTE
+	SATIRE,path,qsn1_fn,qsn2_fn,fac1_fn,umb1_fn,pen1_fn,340,350,/NLTE
+;	SATIRE,path,qsn1_fn,qsn2_fn,fac1_fn,umb1_fn,pen1_fn,260,270,/NLTE
 
 	FIX_BSAT,path,free_p1,/NLTE
 
